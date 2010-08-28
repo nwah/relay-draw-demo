@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content='text/html; charset=utf-8' http-equiv='Content-Type' />
+    <title>Drawin'</title>
+    
+    <style type="text/css">
+    
+      html { background:#eee; }
+      
+      #canvas {
+        background:#fff;
+        position:absolute;
+        top:100px; left:50%;
+        margin-left:-350px;
+        -webkit-box-shadow:0px 3px 5px rgba(0,0,0,0.3);
+        -moz-box-shadow:0px 3px 5px rgba(0,0,0,0.3);
+        box-shadow:0px 3px 5px rgba(0,0,0,0.3);
+        cursor:crosshair; }
+      
+      #etc {
+        position:absolute;
+        top:40px; left:50%;
+        margin-left:-330px;
+        width:700px; }
+      
+    	#color {
+    	  position:absolute;
+    	  top:0px; right:20px;
+    	  background:#fff;
+    	  border:none;
+    	  padding:8px;
+    	  color:#555;
+    	  z-index:30;
+    	  width:60px;
+    	  -webkit-border-radius:3px;
+        -webkit-box-shadow:0px 3px 5px rgba(0,0,0,0.3);
+        -moz-box-shadow:0px 3px 5px rgba(0,0,0,0.3);
+        box-shadow:0px 3px 5px rgba(0,0,0,0.3); }
+    	  
+      button {
+        cursor:pointer;
+        display:block;
+        padding:8px;
+        background:#555;
+        color:#eee;
+        border:none;
+        -webkit-border-radius:2px;
+        -webkit-transition: -webkit-border-radius 0.4s;
+        -webkit-box-shadow:0px 3px 5px rgba(0,0,0,0.3);
+        -moz-box-shadow:0px 3px 5px rgba(0,0,0,0.3);
+        box-shadow:0px 3px 5px rgba(0,0,0,0.3); }
+        
+      button:hover {
+        -webkit-border-radius:20px; }
+        
+      button.color {
+        width:12px;
+        text-indent:-99999px; }
+      
+      button#black { background:#222222; }
+      button#purple { background: #7704A5; }
+      button#red { background:#C50903; }
+      button#blue { background:#1874D6; }
+      button#green { background:#18D63E; }
+      
+      #colors {
+        position:absolute;
+        top:0px; right:100px; }
+        
+      #colors button {
+        float:left;
+        margin-right:5px; }
+        
+      #clear {
+        position:absolute;
+        top:0px; right:211px; }
+        
+    </style>
+  
+  </head>
+  <body>
+    <div id="container">
+      <canvas id="canvas" width="700" height="400"></canvas>
+      <div id="etc">
+        <input type="text" id="color" value="#000" />
+        <div id="colors">
+          <button id="black" class="color">#222222</button>
+          <button id="purple" class="color">#7704A5</button>
+          <button id="red" class="color">#C50903</button>
+          <button id="blue" class="color">#1874D6</button>
+          <button id="green" class="color">#18D63E</button>
+        </div>
+        <button id="clear">DESTROY!!</button>
+      </div>
+    </div>
+    
+    <script src='http://api.relay.io/client/FC692AE6-6522-4E2B-BA56-479DCD8D6F2B.js' type='text/javascript'></script>
+      
+    <script type="text/javascript" src="/relay-draw-demo/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="/relay-draw-demo/json2.js"></script>
+    
+    <script type="text/javascript">
+      var relay = new RelayClient("FC692AE6-6522-4E2B-BA56-479DCD8D6F2B");
+      var canvas, ktx,
+          seed = ('abcdefghijklmno'.charAt(Math.floor(Math.random()*15)) + (new Date().getTime())).substr(0,10),
+          count = 0,
+          color = '#000',
+          size = 5,
+          offset = {left:0, top:0},
+          shapes = [],
+          current;
+    
+      function down(e){
+        if('preventDefault' in e) e.preventDefault();
+        check_color();
+        current = { color: color, size: size, id: guid(), points: [point(e)] };
+        push({ type:'shape', id: current.id, data: current });
+        shapes.push( current );
+      }
+      
+      function move(e){
+        if(!current) return;
+        if('preventDefault' in e) e.preventDefault();
+        
+        current.points.push( point(e) );
+        push({ type:'points', id: current.id, data: current.points });
+        draw();
+      }
+      
+      function touchmove( e ){
+        e.preventDefault();
+        move(e.touches[0]);
+      }
+      
+      function touchstart( e ){
+        down(e.touches[0]);
+      }
+      
+      function up(e){
+        current = null;
+      }
+      
+      var draw_timer;
+      function draw(){
+        if(draw_timer) return;
+        draw_timer = setTimeout(real_draw,60);
+      }
+      function real_draw(){
+        draw_timer = null;
+        
+        ktx.clearRect(0,0,700,500);
+        for( var s=0, ls=shapes.length; s<ls; s++ ){
+          var shape = shapes[s],
+              pts = shape.points;
+          if(!pts) continue;
+              
+          ktx.strokeStyle = shape.color;
+          ktx.lineWidth = shape.size || size;
+          ktx.beginPath();
+          
+          ktx.moveTo( pts[0][0], pts[0][1]);
+          for( var p=1, pl=pts.length; p < pl; p++ ){
+            ktx.lineTo( pts[ p ][ 0 ], pts[ p ][ 1 ] ); 
+          }
+          
+          ktx.stroke();
+        }
+      }
+      
+      function find_shape(id){
+        var out;
+        for( var n=0, l=shapes.length; n < l; n++ )
+          if( shapes[n].id == id )
+            out = shapes[n];
+        return out;
+      }
+      
+      function get_shape(obj){
+        if( !find_shape(obj.id) )
+          shapes.push( obj.data );
+        draw();
+      }
+      
+      function get_points(obj){
+        var id = obj.id, owner = find_shape( obj.id );
+        if( !owner ) return;
+        owner.points = obj.data;
+        draw();
+      }
+      
+      function clear_shapes(){
+        current = null;
+        shapes = [];
+        draw();
+      }
+      
+      function point(e){ return [ e.pageX-offset.left, e.pageY-offset.top ]; }
+      function guid(){ return seed + '-' + (++count);}
+      function check_color(){ return (color = $('#color').val()||'#000'); }
+      
+      $(function(){
+        canvas = $('#canvas');
+        ktx = canvas[0].getContext('2d');
+        offset = canvas.offset();
+        
+        canvas.mousedown( down );
+        $(document).mousemove( move ).mouseup( up );
+      
+        canvas[0].addEventListener('touchmove', touchmove );
+        canvas[0].addEventListener('touchstart', touchstart );
+        canvas[0].addEventListener('touchend', up );
+        
+        $('#clear').click(function(){ push({type:'clear'}); });
+        
+        $('#colors button').click(function(){
+          $('#color').val( $(this).text() );
+        });
+        
+      });
+      
+      var queue = [],
+          push_timer;
+      
+      
+      function push(message){
+        queue.push(message);
+        push_timer = setTimeout(real_push,100);
+        // real_push();
+      }
+      
+      function real_push(message){
+        push_timer = false;
+        relay.insert("D953DEC3-B6FE-43CC-9A4A-F1570C370AEE", {data:JSON.stringify(queue),origin:seed});
+        queue = [];
+      }
+      
+      function pull(msg){
+        var messages = JSON.parse(msg.data), message;
+        
+        for( var n=0, l=messages.length; n < l; n++ ){
+          message = messages[n];
+          if( message.type == 'clear' )
+            clear_shapes();
+          else if( msg.origin == seed ) continue;
+          if( message.type == 'shape' )
+            get_shape( message );
+          else if( message.type == 'points' )
+            get_points( message );
+        }
+      }
+      
+      relay.getUpdates( pull );
+    </script>
+  </body>
+</html>
