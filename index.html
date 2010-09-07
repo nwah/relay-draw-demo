@@ -169,7 +169,7 @@ var findAngle = function(p1,p2){
           if('preventDefault' in e) e.preventDefault();
           current.points.push( point(e) );
 
-          push({ type:'cursor', id: 'cur'+current.id, color: color, data: [point(e)] });   
+          //push({ type:'cursor', id: 'cur'+current.id, color: color, data: [point(e)] });   
 
           draw();
       }
@@ -186,7 +186,7 @@ var findAngle = function(p1,p2){
       function up(e){
           if (current) {
               push({ type:'points', id: current.id, data: reduceShape(removeClosePoints(current.points)) });
-              push({ type:'uncursor', id: 'cur'+current.id });   
+              // push({ type:'uncursor', id: 'cur'+current.id });   
           }
           current = null;
       }
