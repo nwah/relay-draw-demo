@@ -182,8 +182,9 @@ var findAngle = function(p1,p2){
       }
       
       function up(e){
-        push({ type:'points', id: current.id, data: reduceShape(removeClosePoints(current.points)) });
-        current = null;
+          if (current) 
+              push({ type:'points', id: current.id, data: reduceShape(removeClosePoints(current.points)) });
+          current = null;
       }
       
       var draw_timer;
