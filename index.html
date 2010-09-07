@@ -165,11 +165,13 @@ var findAngle = function(p1,p2){
       }
       
       function move(e){
-        if(!current) return;
-        if('preventDefault' in e) e.preventDefault();
-        
-        current.points.push( point(e) );
-        draw();
+          if(!current) return;
+          if('preventDefault' in e) e.preventDefault();
+          current.points.push( point(e) );
+
+          push({ type:'cursor', id: 'cur'+current.id, color: color, data: [point(e)] });   
+
+          draw();
       }
       
       function touchmove( e ){
@@ -182,8 +184,10 @@ var findAngle = function(p1,p2){
       }
       
       function up(e){
-          if (current) 
+          if (current) {
               push({ type:'points', id: current.id, data: reduceShape(removeClosePoints(current.points)) });
+              push({ type:'uncursor', id: 'cur'+current.id });   
+          }
           current = null;
       }
       
@@ -197,10 +201,19 @@ var findAngle = function(p1,p2){
         
         ktx.clearRect(0,0,700,500);
         for( var s=0, ls=shapes.length; s<ls; s++ ){
+          if (!shapes[s]) continue;
           var shape = shapes[s],
-              pts = reduceShape(removeClosePoints(shape.points));
+              pts = reduceShape(removeClosePoints(shape.points)),
+              type= shape.type;
           if(!pts) continue;
-              
+          if (type == 'cursor') {
+              ktx.fillStyle = shape.color;
+              ktx.beginPath();
+              ktx.arc(pts[0][0],pts[0][1], 5, 0, Math.PI*2, true);
+              ktx.closePath();
+              ktx.fill();
+              continue 
+          }
           ktx.strokeStyle = shape.color;
           ktx.lineWidth = shape.size || size;
           ktx.beginPath();
@@ -215,12 +228,16 @@ var findAngle = function(p1,p2){
       }
       
       function find_shape(id){
-        var out;
-        for( var n=0, l=shapes.length; n < l; n++ )
-          if( shapes[n].id == id )
-            out = shapes[n];
-        return out;
+        for( var n=0; n < shapes.length; n++ )
+          if( shapes[n] && shapes[n].id == id ) return shapes[n];
       }
+
+      function del_shape(id){
+        var out;
+        for( var n=0; n < shapes.length; n++ )
+          if( shapes[n] && shapes[n].id == id ) delete shapes[n];
+      }
+
       
       function get_shape(obj){
         if( !find_shape(obj.id) )
@@ -234,7 +251,20 @@ var findAngle = function(p1,p2){
         owner.points = obj.data;
         draw();
       }
-      
+      function write_cursor (obj) {
+          var shape = find_shape(obj.id);
+          if (shape) {
+              shape.points = [];
+              shape.points = obj.data;
+          } else {
+              shapes.push ({id: obj.id, type:'cursor', color:obj.color, points: obj.data});
+          }
+          draw();
+      }
+      function delete_cursor (obj) {
+          del_shape(obj.id);
+          draw();
+      }
       function clear_shapes(){
         current = null;
         shapes = [];
@@ -293,7 +323,12 @@ var findAngle = function(p1,p2){
             get_shape( message );
           else if( message.type == 'points' )
             get_points( message );
-        }
+          else if (message.type == 'cursor')
+            write_cursor(message);      
+          else if (message.type == 'uncursor')
+            delete_cursor(message);      
+
+        } 
       }
       
       relay.getUpdates( pull );
