@@ -122,9 +122,8 @@
       function move(e){
         if(!current) return;
         if('preventDefault' in e) e.preventDefault();
-        
         current.points.push( point(e) );
-        push({ type:'points', id: current.id, data: current.points });
+
         draw();
       }
       
@@ -138,7 +137,8 @@
       }
       
       function up(e){
-        current = null;
+          push({ type:'points', id: current.id, data: current.points });
+          current = null;
       }
       
       var draw_timer;
