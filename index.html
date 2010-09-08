@@ -125,13 +125,13 @@ var removeClosePoints = function(l){
   return out;
 };
 
-var reduceShape = function(l){
+var reduceAngels = function(l){
   var out = [l[0]];
   var a = findAngle(l[1],l[1]);
   for (var i = 1; i < l.length - 1; i++){
     var c = findAngle(l[i],l[i+1]);
     var h = Math.abs(a - c);
-    if (h > 0.2){
+    if (h > 0.009){
       out.push(l[i]);
       a = c;
     }
@@ -145,6 +145,7 @@ var findAngle = function(p1,p2){
   return Math.atan2(p1[Y] - p2[Y], p1[X] - p2[X]); 
 };
 
+function reduceShape (l) { return reduceAngels(removeClosePoints(l)); };
 
       var relay = new RelayClient("FC692AE6-6522-4E2B-BA56-479DCD8D6F2B");
       var canvas, ktx,
@@ -185,8 +186,8 @@ var findAngle = function(p1,p2){
       
       function up(e){
           if (current) {
-              push({ type:'points', id: current.id, data: reduceShape(removeClosePoints(current.points)) });
-              // push({ type:'uncursor', id: 'cur'+current.id });   
+              push({ type:'points', id: current.id, data: reduceShape(current.points) });
+               // push({ type:'uncursor', id: 'cur'+current.id });   
           }
           current = null;
       }
@@ -203,7 +204,7 @@ var findAngle = function(p1,p2){
         for( var s=0, ls=shapes.length; s<ls; s++ ){
           if (!shapes[s]) continue;
           var shape = shapes[s],
-              pts = reduceShape(removeClosePoints(shape.points)),
+              pts = reduceShape(shape.points),
               type= shape.type;
           if(!pts) continue;
           if (type == 'cursor') {
